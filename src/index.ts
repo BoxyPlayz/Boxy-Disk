@@ -52,11 +52,12 @@ app.get('/', (req, res) => {
 
 app.delete("/deleteFile/:filename", (req, res) => {
     let filename = req.params.filename;
-    if (!fs.existsSync(path.join(__dirname, filename))) return
+    if (!fs.existsSync(path.join(__dirname, "uploads", filename))) return
     let files = getFiles();
     let fileIndex = files.findIndex((file: FilesList) => file.filename == filename);
     files.splice(fileIndex, 1);
     fs.writeFileSync(path.join(__dirname, 'files.json'), JSON.stringify(files));
+    fs.unlinkSync(path.join(__dirname, "uploads", filename));
 })
 
 app.get("/getFiles", (req, res) => {
@@ -66,7 +67,7 @@ app.get("/getFiles", (req, res) => {
 app.get("/getFile/:filename", (req, res) => {
     let filename = req.params.filename;
     let files = getFiles();
-    let file = files.find((file: any) => file.filename === filename);
+    let file = files.find((file: FilesList) => file.filename === filename);
     if (!file) {
         res.status(404).send("File not found");
         return;
@@ -77,6 +78,7 @@ app.get("/getFile/:filename", (req, res) => {
 
 app.post("/upload/file", upload.single("File"), (req, res) => {
     var files = getFiles();
+    if (!req.file) { res.status(400).send("No file uploaded"); }
     files.push({
         path: path.join(req.file!.destination,
             req.file!.filename),
@@ -84,7 +86,7 @@ app.post("/upload/file", upload.single("File"), (req, res) => {
         filename: req.file!.filename,
     });
     fs.writeFileSync(path.join(__dirname, 'files.json'), JSON.stringify(files));
-    res.send(files);
+    res.redirect("/");
 })
 
 const server = http.createServer(app);
